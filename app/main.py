@@ -56,18 +56,24 @@ async def verify_webhook(request: Request) -> int:
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
-    if "hub.challenge" in data:
-        return data["hub.challenge"]  # Respond to Facebook's initial verification
-    elif "entry" in data and "changes" in data["entry"][0]:
-        changes = data["entry"][0]["changes"]
-        for change in changes:
-            if change["field"] == "comments":
-                comment_id = change["value"]["comment_id"]
-                # Respond to the comment with a static message
-                # Implement the logic to reply to the comment
-                reply_message = "Thank you for your comment!"
-                return {"status": "comment replied"}
-    return {"status": "ignored"}
+    print(data)
+    try:
+        if "entry" in data and "changes" in data["entry"][0]:
+            changes = data["entry"][0]["changes"]
+            for change in changes:
+                if change["field"] == "comments":
+                    comment_id = change["value"]["id"]
+                    # Respond to the comment with a static message
+                    # Implement the logic to reply to the comment
+                    reply_message = "Thank you for your comment!"
+                    return {"status": "comment replied"}
+        
+        return {"status": "ignored"}
+    except Exception as e:
+        print(e)
+        return {
+            "status": "unexpected response"
+        }        
 
 
 @app.get("/privacy")
