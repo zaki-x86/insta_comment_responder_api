@@ -36,7 +36,15 @@ def post_message_to_instagram_account(message: Message) -> dict[str,Optional[str
         return {"post_id": id}
     return {"post_id": None}
 
-@app.post("/webhook")
+@app.get("/webhook")
+async def verify_webhook(request: Request):
+    """Verifies the webhook"""
+    challenge = request.query_params.get("hub.challenge")
+    if challenge:
+        return challenge
+    return {"error": "No challenge found"}
+
+@app.get("/webhook")
 async def webhook(request: Request):
     data = await request.json()
     if "hub.challenge" in data:
@@ -56,4 +64,4 @@ async def webhook(request: Request):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run(app, host="127.0.0.1", port=9999)
+    uvicorn.run(app, host="127.0.0.1", port=9999, reload=True)
