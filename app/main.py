@@ -53,7 +53,7 @@ async def verify_webhook(request: Request) -> int:
     return {"error": "No challenge found"}
 
 
-@app.get("/webhook")
+@app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
     if "hub.challenge" in data:
