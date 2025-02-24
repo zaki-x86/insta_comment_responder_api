@@ -37,7 +37,7 @@ def post_message_to_instagram_account(message: Message) -> dict[str,Optional[str
     return {"post_id": None}
 
 @app.get("/webhook")
-async def verify_webhook(request: Request):
+async def verify_webhook(request: Request) -> int:
     """Verifies the webhook"""
     challenge = request.query_params.get("hub.challenge")
     if challenge:
