@@ -41,3 +41,17 @@ class FBBService:
             return self._publish_media(media_id)
         else:
             return None
+
+    def reply_to_comment(self, comment_id: str, message: str):
+        url = f"{self.base_url}/{comment_id}/comments?access_token={self.access_token}"
+        payload = {
+            "message": message
+        }
+        response = requests.post(url, data=payload)
+
+        print(f"Comment reply res: {response.text}")
+
+        if response.status_code == 200:
+            return response.json()["id"]
+        else:
+            return None

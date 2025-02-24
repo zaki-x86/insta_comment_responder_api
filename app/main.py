@@ -1,12 +1,13 @@
 import os
 from typing import Optional
-
+from datetime import datetime
 from decouple import config
 from fastapi import FastAPI, Request
 from starlette.responses import FileResponse
 
-from app.schemas import Message
+from app.schemas import Message, EventLog
 from app.service import FBBService
+from apscheduler.schedulers.background import BackgroundScheduler
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -18,20 +19,38 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
+scheduler = BackgroundScheduler()
+
 fbb = FBBService(
     access_token=config("META_DEVELOPER_ACCESS_TOKEN"),
     insta_account=config("INSTAGRAM_ACCOUNT_ID"),
 )
 
+monitor: list[EventLog] = []
+
+
+def reset_monitor():
+    global monitor
+    monitor = []
+
+
+scheduler.add_job(reset_monitor, "interval", minutes=15)
+
 
 @app.on_event("startup")
 def on_startup():
-    pass
+    global scheduler
+    scheduler.start()
 
 
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
+
+
+@app.get("/monitor")
+async def get_monitor() -> list[EventLog]:
+    return monitor
 
 
 @app.post("/post")
@@ -49,6 +68,13 @@ async def verify_webhook(request: Request) -> int:
     """Verifies the webhook"""
     challenge = request.query_params.get("hub.challenge")
     if challenge:
+        monitor.append(
+            EventLog(
+                event="verification",
+                data={"challenge": challenge},
+                timestamp=str(datetime.now()),
+            )
+        )
         return challenge
     return {"error": "No challenge found"}
 
@@ -56,24 +82,50 @@ async def verify_webhook(request: Request) -> int:
 @app.post("/webhook")
 async def webhook(request: Request):
     data = await request.json()
-    print(data)
+    monitor.append(EventLog(event="notification", data=data, timestamp=str(datetime.now())))
     try:
         if "entry" in data and "changes" in data["entry"][0]:
             changes = data["entry"][0]["changes"]
             for change in changes:
                 if change["field"] == "comments":
                     comment_id = change["value"]["id"]
-                    # Respond to the comment with a static message
-                    # Implement the logic to reply to the comment
                     reply_message = "Thank you for your comment!"
-                    return {"status": "comment replied"}
-        
+                    id = fbb.reply_to_comment(comment_id, reply_message)
+                    if not id:
+                        monitor.append(
+                            EventLog(
+                                event="reply",
+                                data={"status": "failed to reply"},
+                                timestamp=str(datetime.now()),
+                            )
+                        )
+                        return {"status": "notification received, couldn't reply back"}
+                    monitor.append(
+                        EventLog(
+                            event="reply",
+                            data={"status": "replied"},
+                            timestamp=str(datetime.now()),
+                        )
+                    )
+                    return {"status": f"comment replied with id {id}"}
+        monitor.append(
+            EventLog(
+                event="notification",
+                data={"status": "ignored"},
+                timestamp=str(datetime.now()),
+            )
+        )
         return {"status": "ignored"}
     except Exception as e:
         print(e)
-        return {
-            "status": "unexpected response"
-        }        
+        monitor.append(
+            EventLog(
+                event="notification",
+                data={"status": f"unexpected response: {e}"},
+                timestamp=str(datetime.now()),
+            )
+        )
+        return {"status": "unexpected response"}
 
 
 @app.get("/privacy")
