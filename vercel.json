@@ -1,5 +1,5 @@
 {
-    "devCommand": "uvicorn app:app --port 3000",
+    "devCommand": "uvicorn app.main:app --port 8000",
     "builds": [
         {
             "src": "app/main.py",
