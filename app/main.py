@@ -1,9 +1,14 @@
-from fastapi import FastAPI
-from fastapi import Request
-from app.schemas import Message
-from decouple import config
-from app.service import FBBService
+import os
 from typing import Optional
+
+from decouple import config
+from fastapi import FastAPI, Request
+from starlette.responses import FileResponse
+
+from app.schemas import Message
+from app.service import FBBService
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 app = FastAPI(
     title="Task API",
@@ -23,18 +28,21 @@ fbb = FBBService(
 def on_startup():
     pass
 
+
 @app.get("/")
 async def read_root():
     return {"Hello": "World"}
 
+
 @app.post("/post")
-def post_message_to_instagram_account(message: Message) -> dict[str,Optional[str]]:
+def post_message_to_instagram_account(message: Message) -> dict[str, Optional[str]]:
     """Sends a post to instagram"""
     id = fbb.send_post(message.message, message.image_url)
 
     if id:
         return {"post_id": id}
     return {"post_id": None}
+
 
 @app.get("/webhook")
 async def verify_webhook(request: Request) -> int:
@@ -43,6 +51,7 @@ async def verify_webhook(request: Request) -> int:
     if challenge:
         return challenge
     return {"error": "No challenge found"}
+
 
 @app.get("/webhook")
 async def webhook(request: Request):
@@ -59,6 +68,11 @@ async def webhook(request: Request):
                 reply_message = "Thank you for your comment!"
                 return {"status": "comment replied"}
     return {"status": "ignored"}
+
+
+@app.get("/privacy")
+async def privacy():
+    return FileResponse(f"{BASE_DIR}/static/privacy.html")
 
 
 if __name__ == "__main__":
