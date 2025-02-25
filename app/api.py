@@ -1,11 +1,10 @@
-from typing import Optional, Annotated, Union
-from datetime import datetime
-from fastapi import APIRouter, Request, Response, BackgroundTasks
-from app.core import get_monitor_state, state
+from typing import Optional, Union
 
+from fastapi import APIRouter, Request, Response
 from starlette.responses import FileResponse
 
-from app.schemas import Message, EventLog
+from app.core import get_monitor_state, state
+from app.schemas import EventLog, Message
 
 router = APIRouter()
 
@@ -13,17 +12,20 @@ monitor = get_monitor_state()
 
 
 @router.get("/", status_code=200)
-async def read_root():
+async def home():
     return {"Hello": "World"}
 
 
 @router.get("/monitor", status_code=200)
-async def get_monitor() -> list[EventLog]:
+async def get_webhook_event_logs() -> list[EventLog]:
+    """Returns the monitor state"""
     return monitor
 
 
 @router.post("/post", status_code=201)
-def post_message_to_instagram_account(message: Message, response: Response) -> dict[str, Optional[str]]:
+def post_message_to_instagram_account(
+    message: Message, response: Response
+) -> dict[str, Optional[str]]:
     """Sends a post to instagram"""
     id = state.fbb.send_post(message.message, message.image_url)
 
@@ -34,8 +36,10 @@ def post_message_to_instagram_account(message: Message, response: Response) -> d
 
 
 @router.get("/webhook", status_code=200)
-async def verify_webhook(request: Request, response: Response) -> Union[int, dict]:
-    """Verifies the webhook"""
+async def echo_back_verification_webhook(
+    request: Request, response: Response
+) -> Union[int, dict]:
+    """Verifies the webhook by echoing back the challange code"""
     challenge = request.query_params.get("hub.challenge", None)
     if challenge:
         return challenge
@@ -49,7 +53,10 @@ async def verify_webhook(request: Request, response: Response) -> Union[int, dic
 
 
 @router.post("/webhook", status_code=200)
-async def webhook(request: Request, response: Response, tasks: BackgroundTasks):
+async def process_new_comment_notification_webhook(
+    request: Request, response: Response
+):
+    """Received new comment notification and processes the event"""
     data = await request.json()
     try:
         comment_id, _ = state.fbb.process_new_comment_notification(data)

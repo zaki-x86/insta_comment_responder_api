@@ -1,8 +1,8 @@
-from typing import Annotated, Any
-from fastapi import FastAPI, Request, Response
-from app.schemas import EventLog
+from fastapi import FastAPI, Request
+
 from app.api import router as api_router
 from app.core import get_monitor_state, state
+from app.schemas import EventLog
 
 app = FastAPI(
     title="Task API",
@@ -25,7 +25,7 @@ def on_startup():
 
 
 @app.middleware("http")
-async def record(request: Request, call_next):
+async def record_webhook_notifications(request: Request, call_next):
     monitor = get_monitor_state()
     if request.url.path == "/webhook":
         monitor.append(
