@@ -42,6 +42,17 @@ class FBBService:
         else:
             return None
 
+    def process_new_comment_notification(self, data):
+        if "entry" in data and "changes" in data["entry"][0]:
+            changes = data["entry"][0]["changes"]
+            for change in changes:
+                if change["field"] == "comments":
+                    comment_id = change["value"]["id"]
+                    comment_text = change["value"]["text"]
+                    return comment_id, comment_text
+            
+            return None, None
+
     def reply_to_comment(self, comment_id: str, message: str):
         url = f"{self.base_url}/{comment_id}/comments?access_token={self.access_token}"
         payload = {

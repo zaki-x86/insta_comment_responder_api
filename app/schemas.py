@@ -1,5 +1,6 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import Union, Optional
+from datetime import datetime
 
 class Message(BaseModel):
     message: str
@@ -7,5 +8,5 @@ class Message(BaseModel):
 
 class EventLog(BaseModel):
     event: str
-    data: dict
-    timestamp: Optional[str] = None
+    data: Union[str, dict]
+    timestamp: Optional[str] = str(datetime.now().isoformat())
